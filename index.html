@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<style>
+			#inputArea{width: 1 0px;height: 50px;background: #71B2FF;color: #fff;font-size: 24px;line-height: 100px;text-align: center;}
+			button{width: 135px;height: 40px;line-height: 40px;text-align: center;font-size: 22px;color: #FFFFFF;background: #71B2FF;border-radius: 5px;
+			outline: none;border: none;cursor: pointer;}
+			button.post{background: #DEDBDE;}
+			input[type="file"]{visibility: hidden;}
+		</style>
+	</head>
+	<body>
+		<div >
+			<canvas id="imgCanvas"></canvas>
+			<canvas id="resultCanvas"></canvas>
+		</div>
+		<div>
+			<input id="inputArea" type="file">
+			<button class="chose"  onclick="openFile()">选择图片</button>
+			<button class="post" id="putImg">上传图片</button>
+		</div>
+		<div style="text-align: center;">
+			<p>裁切后的图片</p>
+			<img src="" id="crop" style="border-radius: 50%;">
+		</div>
+		<script>
+			var imgForm = document.getElementById("inputArea");
+			var putImgSrc = "";
+			if(typeof FileReader==="undefined"){
+				alert("抱歉，你的浏览器不支持 FileReader")
+			}else{
+				imgForm.addEventListener("change",readFile,false)
+			}
+			function openFile(){
+				imgForm.click()
+			}
+			function readFile(){
+				var myForm = new FormData();
+				var imageData = imgForm.files[0];
+				myForm.append("image",imageData);
+				console.log(myForm.getAll("image"))
+				var reader = new FileReader(); //调用 FileReader 对象
+				reader.readAsDataURL(imageData); //	通过DataURL的方式返回图像
+				reader.onload = function(e){
+					console.log(e)
+					console.log(e.target.result)
+				}
+				var theCanvas = document.getElementById("imgCanvas");
+				var canvasImg = theCanvas.getContext("2d");
+				var img = new Image();
+				reader.onload = function(e){
+					img.src=e.target.result;
+					console.log(img)
+				}
+				img.onload = function(){
+					theCanvas.width=img.width;
+					theCanvas.height=img.height;
+					canvasImg.drawImage(img,0,0);
+					var resultCanvas = document.getElementById("resultCanvas");
+					var resultImg = resultCanvas.getContext("2d");
+					var cutDate = canvasImg.getImageData(100,100,200,200);
+					resultImg.putImageData(cutDate,0,0);
+					var flag = false;
+					var W=img.width;
+					var H=img.height;
+					var startX = 0;
+					var startY = 0;
+					
+					//当鼠标被按下；
+					theCanvas.addEventListener("mousedown",function(e){
+						flag = true;
+						startX = e.offsetX;
+						startY = e.offsetY;
+						console.log("e.clientX" +"========="+e.offsetX)
+						console.log("e.clientY" +"========="+e.offsetY)
+						console.log(e)
+					});
+					
+					//当鼠标移动
+					theCanvas.addEventListener("mousemove",function(e){
+						if(flag){
+							canvasImg.clearRect(0,0,W,H);//清除整个画面
+							canvasImg.drawImage(img,0,0);//重新绘图片
+							canvasImg.fillStyle='rgba(255,255,255,0.6)';
+							canvasImg.fillRect(0,0,e.offsetX,startY)//矩形A
+							canvasImg.fillRect(e.offsetX,0,W-e.offsetX,e.offsetY)//矩形B
+							canvasImg.fillRect(startX,e.offsetY,W-startX,H-e.offsetY)//矩形C
+							canvasImg.fillRect(0,startY,startX,H-startY)//矩形D
+							canvasImg.strokeRect(startX,startY,e.offsetX-startX,e.offsetY-startY);
+							resultImg.clearRect(0,0,W,H);
+							cutData = canvasImg.getImageData(startX,startY,e.offsetX-startX,e.offsetY-startY);
+							resultCanvas.width=e.offsetX-startX;
+							resultCanvas.height=e.offsetY-startY;
+							resultImg.putImageData(cutData,0,0)
+							console.log(flag)
+						}
+					});
+					var resultFiles={};
+					theCanvas.addEventListener("mouseup",function(e){
+						resultCanvas.toBlob(function(blob){
+							resultFiles = blob;
+							console.log(blob)
+						})
+						flag = false;
+//						console.log("up"+flag)
+						putImgSrc = resultCanvas.toDataURL();
+					})
+				}
+			};
+			function getImg(src){
+				var img = document.getElementById("crop");
+					img.src=src;
+			};
+			var putImg = document.getElementById("putImg");
+			putImg.onclick=function(){
+				getImg(putImgSrc)
+			}
+		</script>
+	</body>
+</html>
